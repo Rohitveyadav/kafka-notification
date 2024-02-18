@@ -1,5 +1,11 @@
 const { kafka } = require('./kafka-connection');
+const readline = require('readline');
 require('dotenv').config();
+
+const rl =  readline.createInterface({
+    input:process.stdin,
+    output:process.stdout
+})
 
 async function init() {
     try {
@@ -8,15 +14,22 @@ async function init() {
         await producer.connect();
         console.log("Producer connected successfully");
 
-        await producer.send({
-            topic: process.env.TOPIC,
-            messages: [
-                { partition: 0, key: "location", value: 'Hello KafkaJS user!' },
-            ],
-        });
+        rl.setPrompt('>');
+        rl.prompt();
 
-        console.log("Message produced successfully");
-        await producer.disconnect();
+        rl.on('line', async function(line){
+            const [type,location] =  line.split(' ');
+            await producer.send({
+                topic: process.env.TOPIC,
+                messages: [
+                    { partition: type.toLowerCase() === 'car' ? 0 : 1, key: `${location}`, value: `hello....${type}` },
+                ],
+            });
+        }).on('close',async ()=>{
+            console.log("Message produced successfully");
+            await producer.disconnect();
+        })
+        
     } catch (error) {
         console.error('Error initializing Kafka producer:', error.message);
     } 
